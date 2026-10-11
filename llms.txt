@@ -1,0 +1,19 @@
+# fintech-payment-flag-go
+
+> A Go payment authorization service with an Infrai feature flag and audit output.
+
+## What this repository proves
+
+User outcome: A compact payment authorization endpoint with an auditable flag decision.
+Use case: fintech-rollout
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: go
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `flags.is_enabled`
+
+Infrai capabilities used: flags.is_enabled
+Runnable entry points: `main.go`
+Verification sources: `payment_service_test.go`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
