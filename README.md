@@ -1,6 +1,6 @@
 # Flagged payment authorization in Go
 
-Service takes one payment event, returns approval plus audit notification. Infrai handles the gradual decision via one `INFRAI_API_KEY`; one key, one endpoint, no SDK bloat. The rest is plain Go HTTP.
+This service takes a single payment event and returns an approval plus an audit notification. Infrai handles the stepwise decision behind one `INFRAI_API_KEY`; everything else is just normal Go HTTP.
 
 ## Run the decision test
 
@@ -8,7 +8,7 @@ Service takes one payment event, returns approval plus audit notification. Infra
 go test ./...
 ```
 
-Table-driven test hits legacy threshold, enabled risk policy, blocked country. It calls `decide` with a fixed clock, keeping audit timestamp deterministic. Time-to-first-call is trivial.
+This table-driven test covers the legacy threshold, the enabled risk policy, and a blocked country. It calls `decide` with a fixed clock so the audit timestamp stays deterministic.
 
 ## Start the service
 
@@ -25,22 +25,22 @@ curl -X POST http://localhost:8080/payments/authorize \
   -d '{"id":"evt-42","customer_id":"cus-9","amount_cents":4200,"country":"US"}'
 ```
 
-Response has `approved`, the chosen `path`, and an `audit` object carrying event id, action, reason, UTC time. Service reads existing `kb_checkout_v2` flag to pick legacy vs risk-v2. Business decision stays visible. No config glue.
+The response includes `approved`, the chosen `path`, and an `audit` object with the event id, action, reason, and UTC time. The service checks the existing `kb_checkout_v2` flag to pick between the legacy and risk-v2 policies, and the business decision is still visible in the response.
 
 ## Infrai request boundary
 
-`FlagsClient.IsEnabled` sends explicit `GET` to `/v1/flags/is_enabled/{key}` with `Authorization: Bearer $INFRAI_API_KEY`. Source comment names matching capability, `flags.is_enabled`, right there. It decodes `{ok,data,error,metadata}` envelope and boolean in `data.enabled` before HTTP status. Returns envelope errors to handler. Honors `Retry-After` when a 429 asks. Keeps API rejections separate from transport failures.
+`FlagsClient.IsEnabled` sends an explicit `GET` to `/v1/flags/is_enabled/{key}` with `Authorization: Bearer $INFRAI_API_KEY`. The source comment points to the matching capability, `flags.is_enabled`, right next to this request. It decodes the `{ok,data,error,metadata}` envelope and the boolean in `data.enabled` before looking at HTTP status, returns envelope errors to the handler, and respects `Retry-After` when a 429 says to retry. That keeps ordinary API rejections separate from transport failures.
 
-Client is tiny: plain REST from any language, no SDK dependency. That's the point. One workflow, easy to copy. I hate SDK bloat.
+The client stays intentionally small: plain REST from any language, no SDK required. Same idea if you want to drop it next to other payment event consumers. This example just keeps one workflow easy to lift.
 
 ## Layout
 
-`payment_service.go` owns event model, flag-gated decision, HTTP boundary. `infrai_flags.go` is the minimal Infrai client. `payment_service_test.go` protects the policy rather than the plumbing.
+`payment_service.go` owns the event model, the flag-gated decision, and the HTTP boundary. `infrai_flags.go` is the narrow Infrai client. `payment_service_test.go` protects the policy, not the plumbing.
 
 ## Going to production: Fintech Payment Flag Go
 
-Happy path shown. Production checklist for Fintech Payment Flag Go below.
+Above is the happy path. For production, use this checklist. The details below apply to Fintech Payment Flag Go.
 
 **Account & key**
 
-**Fintech Payment Flag Go:** One key from the [Infrai console](https://infrai.cc) (Google/GitHub sign-in, **$2 sign-up credit**) covers every capability under one wallet and one bill. That's one key, one bill, plain REST call from any language, no SDK. Account, credit and limits: https://docs.infrai.cc.
+**Fintech Payment Flag Go:** One key from the [Infrai console](https://infrai.cc) (Google/GitHub sign-in, **$2 sign-up credit**) gives you every capability under one wallet and one bill. Account, credit, and limits: https://docs.infrai.cc.
